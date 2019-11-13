@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>threejs study</title>
+	<style>
+		html, body, canvas{width: 100%; height: 100%; background-color: #fff;}
+	</style>
+	<script type="text/javascript" src="../three/build/three.js"></script>
+</head>
+<body>
+<script type="module">
+	function main () {
+		const objects = []
+		const spread = 15
+		
+		/*1. 创建渲染器添加到页面*/
+		const renderer = new THREE.WebGLRenderer()
+		document.body.appendChild(renderer.domElement);
+		
+		/*2. 创建相机*/
+		const camera = new THREE.PerspectiveCamera(40, 2, .1, 1000)
+		camera.position.z = 120
+		/*3. 创建场景*/
+		const scene = new THREE.Scene()
+		scene.background = new THREE.Color(0xAAAAAA)
+		
+		/*添加两道灯光*/
+		{
+			const color = 0xFFFFFF;
+			const intensity = 1;
+			const light = new THREE.DirectionalLight(color, intensity);
+			light.position.set(-1, 2, 4);
+			scene.add(light);
+		}
+		{
+			const color = 0xFFFFFF;
+			const intensity = 1;
+			const light = new THREE.DirectionalLight(color, intensity);
+			light.position.set(1, -2, -4);
+			scene.add(light);
+		}
+		
+		/*保持窗口大小*/
+		function resizeRendererToDisplaySize(renderer) {
+			const canvas = renderer.domElement;
+			const width = canvas.clientWidth;
+			const height = canvas.clientHeight;
+			const needResize = canvas.width !== width || canvas.height !== height;
+			if (needResize) {
+				renderer.setSize(width, height, false);
+			}
+			return needResize;
+		}
+		/*创建实体*/
+		function addObject (x, y, obj) {
+			obj.position.x = x*spread
+			obj.position.y = y*spread
+			// obj.position.set(x*spread, y*spread) //无效
+			scene.add(obj)
+			objects.push(obj)
+		}
+		/*创建材质: 色相、饱和度、亮度*/
+		function createMaterial () {
+			const material = new THREE.MeshPhongMaterial({
+				side : THREE.DoubleSide,
+			})
+			const hue = Math.random()
+			const saturation = 1
+			const luminance = .5
+			material.color.setHSL(hue, saturation, luminance)
+			return material
+		}
+		/*创建实体*/
+		function addSolidGeometry (x, y, geometry) {
+			const mesh = new THREE.Mesh(geometry, createMaterial())
+			addObject(x, y, mesh)
+		}
+		/*添加线体图形*/
+		function addLineGeometry(x, y, geometry) {
+			const material = new THREE.LineBasicMaterial({color: 0x000000});
+			const mesh = new THREE.LineSegments(geometry, material);
+			addObject(x, y, mesh);
+		}
+		
+		/*****************************************************************************************************/
+		{
+			function loadFont(url) {
+				// promisify font loading
+				const loader = new THREE.FontLoader();
+				return new Promise((resolve, reject) => {
+					loader.load(url, resolve, undefined, reject);
+				});
+			}
+			
+			async function asyncFn() {
+				const font = await loadFont('../three/examples/fonts/helvetiker_regular.typeface.json');
+				const geometry = new THREE.TextBufferGeometry('Hello WebGL', {
+					font: font,
+					size: 2.0,
+					height: .2,
+					curveSegments: 12,
+					bevelEnabled: true,
+					bevelThickness: 0.15,
+					bevelSize: .3,
+					bevelSegments: 5,
+				});
+				addSolidGeometry(-5.4, 2, geometry);
+			}
+			asyncFn()
+		}
+		
+		{
+			const width = 8;
+			const height = 8;
+			const depth = 8;
+			const geometry = new THREE.BoxBufferGeometry(width, height, depth);
+			addSolidGeometry(-4, 2, geometry);
+		}
+		
+		{
+			const radius = 7;
+			const segments = 24;
+			const geometry = new THREE.CircleBufferGeometry(radius, segments)
+			addSolidGeometry(-3, 2, geometry);
+		}
+		
+		{
+			const radius = 6;
+			const height = 8;
+			const segments = 16;
+			const geometry = new THREE.ConeBufferGeometry(radius, height, segments);
+			addSolidGeometry(-2, 2, geometry);
+		}
+		
+		{
+			const radiusTop = 4;
+			const radiusBottom = 4;
+			const height = 8;
+			const radialSegments = 12;
+			const geometry = new THREE.CylinderBufferGeometry(radiusTop, radiusBottom, height, radialSegments);
+			addSolidGeometry(-1, 2, geometry);
+		}
+		
+		{
+			const radius = 7;
+			const geometry = new THREE.DodecahedronBufferGeometry(radius);
+			addSolidGeometry(0, 2, geometry);
+		}
+		
+		{
+			const shape = new THREE.Shape();
+			const x = -2.5;
+			const y = -5;
+			shape.moveTo(x + 2.5, y + 2.5);
+			shape.bezierCurveTo(x + 2.5, y + 2.5, x + 2, y, x, y);
+			shape.bezierCurveTo(x - 3, y, x - 3, y + 3.5, x - 3, y + 3.5);
+			shape.bezierCurveTo(x - 3, y + 5.5, x - 1.5, y + 7.7, x + 2.5, y + 9.5);
+			shape.bezierCurveTo(x + 6, y + 7.7, x + 8, y + 4.5, x + 8, y + 3.5);
+			shape.bezierCurveTo(x + 8, y + 3.5, x + 8, y, x + 5, y);
+			shape.bezierCurveTo(x + 3.5, y, x + 2.5, y + 2.5, x + 2.5, y + 2.5);
+			
+			const extrudeSettings = {
+				steps: 2,
+				depth: 2,
+				bevelEnabled: true,
+				bevelThickness: 1,
+				bevelSize: 1,
+				bevelSegments: 2,
+			};
+			
+			const geometry = new THREE.ExtrudeBufferGeometry(shape, extrudeSettings);
+			addSolidGeometry(1, 2, geometry);
+		}
+		
+		{
+			const radius = 7;
+			const geometry = new THREE.IcosahedronBufferGeometry(radius);
+			addSolidGeometry(2, 2, geometry);
+		}
+		
+		{
+			const points = [];
+			for (let i = 0; i < 10; ++i) {
+				points.push(new THREE.Vector2(Math.sin(i * 0.2) * 3 + 3, (i - 5) * .8));
+			}
+			const geometry = new THREE.LatheBufferGeometry(points);
+			addSolidGeometry(3, 2, geometry);
+		}
+		
+		{
+			const radius = 7;
+			const geometry = new THREE.OctahedronBufferGeometry(radius);
+			addSolidGeometry(4, 2, geometry);
+		}
+		
+		{
+			// from: https://github.com/mrdoob/three.js/blob/b8d8a8625465bd634aa68e5846354d69f34d2ff5/examples/js/ParametricGeometries.js
+			function klein(v, u, target) {
+				u *= Math.PI;
+				v *= 2 * Math.PI;
+				u = u * 2;
+				
+				let x;
+				let z;
+				
+				if (u < Math.PI) {
+					x = 3 * Math.cos(u) * (1 + Math.sin(u)) + (2 * (1 - Math.cos(u) / 2)) * Math.cos(u) * Math.cos(v);
+					z = -8 * Math.sin(u) - 2 * (1 - Math.cos(u) / 2) * Math.sin(u) * Math.cos(v);
+				} else {
+					x = 3 * Math.cos(u) * (1 + Math.sin(u)) + (2 * (1 - Math.cos(u) / 2)) * Math.cos(v + Math.PI);
+					z = -8 * Math.sin(u);
+				}
+				
+				const y = -2 * (1 - Math.cos(u) / 2) * Math.sin(v);
+				
+				target.set(x, y, z).multiplyScalar(0.75);
+			}
+			
+			const slices = 25;
+			const stacks = 25;
+			const geometry = new THREE.ParametricBufferGeometry(klein, slices, stacks);
+			addSolidGeometry(5, 2, geometry);
+		}
+		
+		{
+			const width = 9;
+			const height = 9;
+			const widthSegments = 2;
+			const heightSegments = 2;
+			const geometry = new THREE.PlaneBufferGeometry(width, height, widthSegments, heightSegments)
+			addSolidGeometry(-5, 0, geometry);
+		}
+		
+		{
+			const verticesOfCube = [
+				-1, -1, -1,    1, -1, -1,    1,  1, -1,    -1,  1, -1,
+				-1, -1,  1,    1, -1,  1,    1,  1,  1,    -1,  1,  1,
+			];
+			const indicesOfFaces = [
+				2, 1, 0,    0, 3, 2,
+				0, 4, 7,    7, 3, 0,
+				0, 1, 5,    5, 4, 0,
+				1, 2, 6,    6, 5, 1,
+				2, 3, 7,    7, 6, 2,
+				4, 5, 6,    6, 7, 4,
+			];
+			const radius = 7;
+			const detail = 2;
+			const geometry = new THREE.PolyhedronBufferGeometry(verticesOfCube, indicesOfFaces, radius, detail)
+			addSolidGeometry(-4, 0, geometry);
+		}
+		
+		{
+			const innerRadius = 2;
+			const outerRadius = 7;
+			const segments = 18;
+			const geometry = new THREE.RingBufferGeometry(innerRadius, outerRadius, segments);
+			addSolidGeometry(-3, 0, geometry);
+		}
+		
+		{
+			const shape = new THREE.Shape();
+			const x = -2.5;
+			const y = -5;
+			shape.moveTo(x + 2.5, y + 2.5);
+			shape.bezierCurveTo(x + 2.5, y + 2.5, x + 2, y, x, y);
+			shape.bezierCurveTo(x - 3, y, x - 3, y + 3.5, x - 3, y + 3.5);
+			shape.bezierCurveTo(x - 3, y + 5.5, x - 1.5, y + 7.7, x + 2.5, y + 9.5);
+			shape.bezierCurveTo(x + 6, y + 7.7, x + 8, y + 4.5, x + 8, y + 3.5);
+			shape.bezierCurveTo(x + 8, y + 3.5, x + 8, y, x + 5, y);
+			shape.bezierCurveTo(x + 3.5, y, x + 2.5, y + 2.5, x + 2.5, y + 2.5);
+			const geometry = new THREE.ShapeBufferGeometry(shape);
+			addSolidGeometry(-2, 0, geometry);
+		}
+		
+		{
+			const radius = 7;
+			const widthSegments = 12;
+			const heightSegments = 8;
+			const geometry = new THREE.SphereBufferGeometry(radius, widthSegments, heightSegments)
+			addSolidGeometry(-1, 0, geometry);
+		}
+		
+		{
+			const radius = 7;
+			const geometry = new THREE.TetrahedronBufferGeometry(radius);
+			addSolidGeometry(0, 0, geometry);
+		}
+		
+		{
+			const radius = 5;
+			const tubeRadius = 2;
+			const radialSegments = 8;
+			const tubularSegments = 24;
+			const geometry = new THREE.TorusBufferGeometry(radius, tubeRadius, radialSegments, tubularSegments)
+			addSolidGeometry(1, 0, geometry);
+		}
+		
+		{
+			const radius = 3.5;
+			const tube = 1.5;
+			const radialSegments = 8;
+			const tubularSegments = 64;
+			const p = 2;
+			const q = 3;
+			const geometry = new THREE.TorusKnotBufferGeometry(radius, tube, tubularSegments, radialSegments, p, q)
+			addSolidGeometry(2, 0, geometry);
+		}
+		
+		{
+			class CustomSinCurve extends THREE.Curve {
+				constructor(scale) {
+					super();
+					this.scale = scale;
+				}
+				getPoint(t) {
+					const tx = t * 3 - 1.5;
+					const ty = Math.sin(2 * Math.PI * t);
+					const tz = 0;
+					return new THREE.Vector3(tx, ty, tz).multiplyScalar(this.scale);
+				}
+			}
+			
+			const path = new CustomSinCurve(4);
+			const tubularSegments = 20;
+			const radius = 1;
+			const radialSegments = 8;
+			const closed = false;
+			const geometry = new THREE.TubeBufferGeometry(path, tubularSegments, radius, radialSegments, closed);
+			addSolidGeometry(3, 0, geometry);
+		}
+		
+		{
+			const width = 8;
+			const height = 8;
+			const depth = 8;
+			const thresholdAngle = 15;
+			const geometry = new THREE.EdgesGeometry(
+				new THREE.BoxBufferGeometry(width, height, depth), thresholdAngle);
+			addLineGeometry(4, 0, geometry);
+		}
+		
+		{
+			const width = 8;
+			const height = 8;
+			const depth = 8;
+			const geometry = new THREE.WireframeGeometry(new THREE.BoxBufferGeometry(width, height, depth))
+			addLineGeometry(5, 0, geometry);
+		}
+		
+		/*****************************************************************************************************/
+		
+		function animateRender (time=0) {
+			time *= .001
+			if(resizeRendererToDisplaySize(renderer)){
+				const canvas = renderer.domElement;
+				camera.aspect = canvas.clientWidth / canvas.clientHeight;
+				camera.updateProjectionMatrix()
+			}
+			
+			objects.forEach((obj, index) => {
+				const speed = .1 + index * .05
+				const rot = time * speed
+				
+				obj.rotation.x = rot;
+				obj.rotation.y = rot;
+				// obj.rotation.set(rot, rot) //无效
+			})
+			renderer.render(scene, camera)
+			requestAnimationFrame(animateRender)
+		}
+		
+		animateRender()
+	}
+	main()
+</script>
+</body>
+</html>
