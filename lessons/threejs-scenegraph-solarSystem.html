@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>threejs study</title>
+	<style>
+		html, body, canvas{width: 100%; height: 100%; background-color: #fff;}
+	</style>
+	<script type="text/javascript" src="../three/build/three.js"></script>
+</head>
+<body>
+<script type="module">
+	/*https://threejsfundamentals.org/threejs/lessons/threejs-scenegraph.html*/
+	import {GUI} from '../three/examples/jsm/libs/dat.gui.module.js'
+	
+	function main () {
+		const objects = []
+		const spread = 15
+		const gui = new GUI()
+		
+		/*1. 创建渲染器添加到页面*/
+		const renderer = new THREE.WebGLRenderer()
+		document.body.appendChild(renderer.domElement);
+		
+		/*2. 创建相机*/
+		const camera = new THREE.PerspectiveCamera(40, 2, .1, 1000)
+		camera.position.set(0, 50, 0)
+		camera.up.set(0, 0, 1)
+		camera.lookAt(0, 0, 0)
+		/*3. 创建场景*/
+		const scene = new THREE.Scene()
+		scene.background = new THREE.Color(0xAAAAAA)
+		
+		/*添加两道灯光*/
+		{
+			const color = 0xFFFFFF;
+			const intensity = 3;
+			const light = new THREE.PointLight(color, intensity);
+			// light.position.set(-1, 2, 4);
+			scene.add(light);
+		}
+		{
+			const color = 0xFFFFFF;
+			const intensity = 1;
+			const light = new THREE.DirectionalLight(color, intensity);
+			light.position.set(1, -2, -4);
+			// scene.add(light);
+		}
+		
+		/*保持窗口大小*/
+		function resizeRendererToDisplaySize(renderer) {
+			const canvas = renderer.domElement;
+			const width = canvas.clientWidth;
+			const height = canvas.clientHeight;
+			const needResize = canvas.width !== width || canvas.height !== height;
+			if (needResize) {
+				renderer.setSize(width, height, false);
+			}
+			return needResize;
+		}
+		/*创建实体*/
+		function addObject (x, y, obj) {
+			obj.position.x = x*spread
+			obj.position.y = y*spread
+			// obj.position.set(x*spread, y*spread) //无效
+			scene.add(obj)
+			objects.push(obj)
+		}
+		/*创建材质: 色相、饱和度、亮度*/
+		function createMaterial () {
+			const material = new THREE.MeshPhongMaterial({
+				side : THREE.DoubleSide,
+			})
+			const hue = Math.random()
+			const saturation = 1
+			const luminance = .5
+			material.color.setHSL(hue, saturation, luminance)
+			return material
+		}
+		/*创建实体*/
+		function addSolidGeometry (x, y, geometry) {
+			const mesh = new THREE.Mesh(geometry, createMaterial())
+			addObject(x, y, mesh)
+		}
+		/*添加线体图形*/
+		function addLineGeometry(x, y, geometry) {
+			const material = new THREE.LineBasicMaterial({color: 0x000000});
+			const mesh = new THREE.LineSegments(geometry, material);
+			addObject(x, y, mesh);
+		}
+		
+		/*****************************************************************************************************/
+			/*创建一个球体*/
+			const radius = 1
+			const widthSegments = 6
+			const heightSegments = 6
+			const sphereGeometry = new THREE.SphereBufferGeometry(radius, widthSegments, heightSegments)
+		
+			/*添加一个太阳系*/
+			const solarSystem = new THREE.Object3D()
+			scene.add(solarSystem)
+			objects.push(solarSystem)
+		
+			/*添加sun的材质*/
+			const sunMaterial = new THREE.MeshPhongMaterial({emissive: 0xFFFF00})
+			const sunMesh = new THREE.Mesh(sphereGeometry, sunMaterial)
+			sunMesh.scale.set(5, 5, 5)
+			solarSystem.add(sunMesh)
+			objects.push(sunMesh)
+		
+			/*创建一个地球系*/
+			const earthOrbit = new THREE.Object3D()
+			earthOrbit.position.x = 10
+			solarSystem.add(earthOrbit)
+			objects.push(earthOrbit)
+		
+			/*添加earth的材质*/
+			const earthMaterial = new THREE.MeshPhongMaterial({emissive: 0x112244, color: 0x2233FF})
+			const earthMesh = new THREE.Mesh(sphereGeometry, earthMaterial)
+			// earthMesh.position.x = 10
+			earthOrbit.add(earthMesh)
+			objects.push(earthMesh)
+		
+			/*创建一个月球系*/
+			const moonOrbit = new THREE.Object3D()
+			moonOrbit.position.x = 2
+			earthOrbit.add(moonOrbit)
+			// objects.push(moonOrbit)
+			
+			/*添加moon的材质*/
+			const moonMaterial = new THREE.MeshPhongMaterial({emissive: 0x222222, color: 0x888888})
+			const moonMesh = new THREE.Mesh(sphereGeometry, moonMaterial)
+			moonMesh.scale.set(.5, .5, .5)
+			moonOrbit.add(moonMesh)
+			objects.push(moonMesh)
+		
+			/*添加坐标轴*/
+		
+			class AxisGridHelper {
+				constructor(node, units=10) {
+				    const axes = new THREE.AxesHelper()
+					axes.material.depthTest = false
+					axes.renderOrder = 2
+					node.add(axes)
+					
+					const grid = new THREE.GridHelper(units, units)
+					grid.material.depthTest = false
+					grid.renderOrder = 1
+					node.add(grid)
+					
+					this.axes = axes
+					this.grid = grid
+					this.visible = false
+				}
+				
+				get visible() {
+				    return this._visible
+				}
+				
+				set visible(v) {
+					this._visible = v
+					this.axes.visible = v
+					this.grid.visible = v
+				}
+			}
+			function makeAxisGrid(node, label, units) {
+				const helper = new AxisGridHelper(node, units)
+				gui.add(helper, 'visible').name(label)
+				
+			}
+			makeAxisGrid(solarSystem, 'solarSystem', 25)
+			makeAxisGrid(sunMesh, 'sunMesh')
+			makeAxisGrid(earthOrbit, 'earthOrbit')
+			makeAxisGrid(earthMesh, 'earthMesh')
+			makeAxisGrid(moonMesh, 'moonMesh')
+		/*****************************************************************************************************/
+		
+		function animateRender (time=0) {
+			time *= .001
+			if(resizeRendererToDisplaySize(renderer)){
+				const canvas = renderer.domElement;
+				camera.aspect = canvas.clientWidth / canvas.clientHeight;
+				camera.updateProjectionMatrix()
+			}
+			
+			objects.forEach((obj, index) => {
+				const speed = .1 + index * .05
+				const rot = time * speed
+				
+				// obj.rotation.x = rot;
+				obj.rotation.y = rot;
+				// obj.rotation.set(rot, rot) //无效
+				
+				/*const axes = new THREE.AxesHelper()
+				axes.material.depthTest = false
+				axes.renderOrder = 1
+				obj.add(axes)*/
+			})
+			renderer.render(scene, camera)
+			requestAnimationFrame(animateRender)
+		}
+		
+		animateRender()
+	}
+	main()
+</script>
+</body>
+</html>
