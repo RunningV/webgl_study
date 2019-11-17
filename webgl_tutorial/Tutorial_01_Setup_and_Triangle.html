@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>WebGL Tutorial 01 - Setup and Triangle</title>
+</head>
+<body>
+	<canvas id="canvas"></canvas>
+	<script type="text/javascript">
+		var vertexShaderText = [
+			'precision mediump float;',
+			'attribute vec2 vertPosition;',
+			'attribute vec3 vertColor;',
+			'varying vec3 fragColor;',
+			'void main()',
+			'{',
+				'fragColor = vertColor;',
+				'gl_Position = vec4(vertPosition, .0, 1.0);',
+			'}'
+		].join('\n')
+
+		var fragmentShaderText = [
+			'precision mediump float;',
+			'varying vec3 fragColor;',
+			'void main()',
+			'{',
+				'gl_FragColor = vec4(fragColor, 1.0);',
+			'}'
+		].join('\n')
+
+		function main() {
+			var canvas = document.getElementById('canvas')
+			var gl = canvas.getContext('webgl')
+
+			if(!gl) {
+				gl = canvas.getContext('experimental-webgl')
+			}
+
+			if(!gl) {
+				console.log('Your browser is not support webgl')
+				return
+			}
+
+			canvas.width = window.innerWidth
+			canvas.height = window.innerHeight
+
+			gl.clearColor(.75, .85, .8, 1.0)
+			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+
+			// create a shader
+			var vertexShader = gl.createShader(gl. VERTEX_SHADER);
+			var fragmengShader = gl.createShader(gl.FRAGMENT_SHADER)
+
+			gl.shaderSource(vertexShader, vertexShaderText)
+			gl.shaderSource(fragmengShader, fragmentShaderText)
+
+			gl.compileShader(vertexShader)
+			if(!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+				console.error('vertexShader', gl.getShaderInfoLog(vertexShader))
+				return
+			}
+
+			gl.compileShader(fragmengShader)
+			if(!gl.getShaderParameter(fragmengShader, gl.COMPILE_STATUS)) {
+				console.error('fragmengShader', gl.getShaderInfoLog(fragmengShader))
+				return
+			}
+
+			var program = gl.createProgram()
+			gl.attachShader(program, vertexShader)
+			gl.attachShader(program, fragmengShader)
+			gl.linkProgram(program)
+			if(!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+				console.error('linkProgram', gl.getProgramInfoLog(program))
+				return
+			}
+
+			gl.validateProgram(program)
+			if(!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
+				console.error('validateProgram', gl.getProgramInfoLog(program))
+				return
+			}
+
+			// create buffer
+			var triangleVertices = [
+			  // X  Y       R    G   B
+				.0, .433,     1.0, 1.0, 0.0,
+				-.5, .0,   0.7, 0.0, 1.0,
+				.5, .0,    0.1, 1.0, 0.6
+			]
+			var triangleVertexBufferObj = gl.createBuffer()
+			gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexBufferObj)
+			gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(triangleVertices), gl.STATIC_DRAW)
+
+			var positionAttribLocation = gl.getAttribLocation(program, 'vertPosition')
+			var colorAttribLocation = gl.getAttribLocation(program, 'vertColor')
+			gl.vertexAttribPointer(
+				positionAttribLocation,
+				2,
+				gl.FLOAT,
+				gl.FALSE,
+				5*Float32Array.BYTES_PER_ELEMENT,
+				0
+			)
+			gl.vertexAttribPointer(
+				colorAttribLocation,
+				3,
+				gl.FLOAT,
+				gl.FALSE,
+				5*Float32Array.BYTES_PER_ELEMENT,
+				2*Float32Array.BYTES_PER_ELEMENT
+			)
+
+			gl.enableVertexAttribArray(positionAttribLocation)
+			gl.enableVertexAttribArray(colorAttribLocation)
+
+			gl.useProgram(program)
+			gl.drawArrays(gl.TRIANGLES, 0, 3)
+		}
+
+		main()
+	</script>
+</body>
+</html>
