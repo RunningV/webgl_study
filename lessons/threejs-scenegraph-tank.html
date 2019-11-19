@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>threejs study</title>
+	<style>
+		html, body, canvas{width: 100%; height: 100%; background-color: #fff;}
+	</style>
+	<script type="text/javascript" src="../three/build/three.js"></script>
+</head>
+<body>
+<script type="module">
+	/*https://threejsfundamentals.org/threejs/lessons/threejs-scenegraph.html*/
+	import {GUI} from '../three/examples/jsm/libs/dat.gui.module.js'
+	
+	function main () {
+		const cameras = []
+		const objects = []
+		const spread = 15
+		const gui = new GUI()
+		
+		/*1. 创建渲染器添加到页面*/
+		const renderer = new THREE.WebGLRenderer()
+		renderer.setClearColor(0xAAAAAA)
+		renderer.shadowMap.enabled = true
+		document.body.appendChild(renderer.domElement);
+		
+		/*2. 创建相机*/
+		function makeCamera (fov=40) {
+			const aspect = 2
+			const zNear = .1
+			const zFar = 1000
+			return new THREE.PerspectiveCamera(fov, aspect, zNear, zFar)
+		}
+		const camera = makeCamera()
+		camera.position.set(8, 4, 10).multiplyScalar(3)
+		camera.lookAt(0, 0, 0)
+		cameras.push(camera)
+		/*3. 创建场景*/
+		const scene = new THREE.Scene()
+		scene.background = new THREE.Color(0xAAAAAA)
+		
+		/*添加两道灯光*/
+		{
+			const d = 50
+			const color = 0xFFFFFF;
+			const intensity = 3;
+			const light = new THREE.PointLight(color, intensity);
+			light.position.set(0, 20, 0);
+			scene.add(light);
+			light.castShadow = true
+			light.shadow.mapSize.width = 2048
+			light.shadow.mapSize.height = 2048
+			light.shadow.camera.left = -d
+			light.shadow.camera.right = d
+			light.shadow.camera.top = d
+			light.shadow.camera.bottom = -d
+			light.shadow.camera.near = 1
+			light.shadow.camera.far = d
+			light.shadow.bias = .001
+		}
+		{
+			const color = 0xFFFFFF;
+			const intensity = 1;
+			const light = new THREE.DirectionalLight(color, intensity);
+			light.position.set(1, 2, 4);
+			scene.add(light);
+		}
+		
+		/*保持窗口大小*/
+		function resizeRendererToDisplaySize(renderer) {
+			const canvas = renderer.domElement;
+			const width = canvas.clientWidth;
+			const height = canvas.clientHeight;
+			const needResize = canvas.width !== width || canvas.height !== height;
+			if (needResize) {
+				renderer.setSize(width, height, false);
+			}
+			return needResize;
+		}
+	
+		/*****************************************************************************************************/
+		const carWidth = 4
+		const carHeight = 1
+		const carLength = 8
+		/*创建一个tank坐标系*/
+		const tank = new THREE.Object3D()
+		scene.add(tank)
+		
+		/*tank系中加入一个实体*/
+		const bodyGeometry = new THREE.BoxBufferGeometry(carWidth, carHeight,carLength)
+		const bodyMaterial = new THREE.MeshPhongMaterial({color: 0x6688AA})
+		const bodyMesh = new THREE.Mesh(bodyGeometry, bodyMaterial)
+		bodyMesh.position.y= 1.4
+		bodyMesh.castShadow = true
+		tank.add(bodyMesh)
+		
+		const tankCameraFov = 75
+		const tankCamera = makeCamera(tankCameraFov)
+		tankCamera.position.x = 3
+		tankCamera.position.z = -6
+		tankCamera.position.y = Math.PI
+		bodyMesh.add(tankCamera)
+		cameras.push(tankCamera)
+		
+		/*添加轮子
+		* 定义轮子形状、定义轮子材质、定义6个轮子位置、创建6个轮子实体*/
+		const wheelRadius = 1
+		const wheelThickness = .5
+		const wheelSegments = 6
+		const wheelGeometry = new THREE.CylinderBufferGeometry(wheelRadius, wheelRadius, wheelThickness, wheelSegments)
+		const wheelMaterial = new THREE.MeshPhongMaterial({color: 0x888888})
+		const wheelPOsitions = [
+			[-carWidth/2 - wheelThickness/2, -carHeight/2, carLength/3],
+			[ carWidth/2 + wheelThickness/2, -carHeight/2, carLength/3],
+			[-carWidth/2 - wheelThickness/2, -carHeight/2, 0],
+			[ carWidth/2 + wheelThickness/2, -carHeight/2, 0],
+			[-carWidth/2 - wheelThickness/2, -carHeight/2, -carLength/3],
+			[ carWidth/2 + wheelThickness/2, -carHeight/2, -carLength/3],
+		]
+		const wheelMeshes = wheelPOsitions.map(p => {
+			const mesh = new THREE.Mesh(wheelGeometry, wheelMaterial)
+			mesh.position.set(...p)
+			mesh.rotation.z = Math.PI/2
+			mesh.castShadow = true
+			bodyMesh.add(mesh)
+			return mesh
+		})
+		
+		/*添加圆顶*/
+		const domeRadius = 2
+		const domeWidth = 12
+		const domeHeight = 12
+		const domePhiStart = 0
+		const domePhiEnd = Math.PI*2
+		const domeThetaStart = 0
+		const domeThetaEnd = Math.PI/2
+		const domeGeometry = new THREE.SphereBufferGeometry(
+			domeRadius, domeWidth, domeHeight, domePhiStart, domePhiEnd, domeThetaStart, domeThetaEnd
+		)
+		const domeMesh = new THREE.Mesh(domeGeometry, bodyMaterial)
+		domeMesh.castShadow = true
+		bodyMesh.add(domeMesh)
+		domeMesh.position.y = .5
+		
+		/*添加炮塔*/
+		const turretWidth = .1
+		const turretHeight = .1
+		const turretLength = 1
+		const turretGeometry = new THREE.BoxBufferGeometry(turretWidth, turretHeight, turretLength)
+		const turretMesh = new THREE.Mesh(turretGeometry, bodyMaterial)
+		const turretPivot = new THREE.Object3D()
+		turretMesh.castShadow = true
+		turretMesh.position.z = turretLength/2
+		turretPivot.scale.set(5, 5, 5)
+		turretPivot.position.y = .5
+		turretPivot.add(turretMesh)
+		bodyMesh.add(turretPivot)
+		
+		/*创建炮塔相机*/
+		const turretCamera = makeCamera()
+		turretCamera.position.y = .75*.2
+		turretMesh.add(turretCamera)
+		cameras.push(turretCamera)
+		
+	   /*创建目标小球*/
+		const targetGeometry = new THREE.SphereBufferGeometry(.4, 8, 8 )
+		const targetMaterial = new THREE.MeshPhongMaterial({color: 0x00FF00, flatShading: true})
+		const targetMesh = new THREE.Mesh(targetGeometry, targetMaterial)
+		const targetOrbit = new THREE.Object3D()
+		const targetElevation = new THREE.Object3D()
+		const targetBob = new THREE.Object3D()
+		targetMesh.castShadow = true
+		scene.add(targetOrbit)
+		targetOrbit.add(targetElevation)
+		targetElevation.position.z = carLength * 2
+		targetElevation.position.y = 8
+		targetElevation.add(targetBob)
+		targetBob.add(targetMesh)
+
+		const targetCamera = makeCamera()
+		const targetCameraPivot = new THREE.Object3D()
+		targetCamera.position.y = 1
+		targetCamera.position.z = -2
+		targetCamera.rotation.y = Math.PI
+		targetBob.add(targetCameraPivot)
+		targetCameraPivot.add(targetCamera)
+		cameras.push(targetCamera)
+		
+		
+		/*创建轨迹线*/
+		const curvePoints = [
+			[-10, 0],
+			[-5,  5],
+			[0,  0],
+			[5, -5],
+			[10, 0],
+			[5, 10],
+			[-5, 10],
+			[-10,-10],
+			[-15, -8],
+			[-10, 0]
+		].map(p => new THREE.Vector2(...p))
+		const curve = new THREE.SplineCurve(curvePoints);
+		const points = curve.getPoints(50)
+		const geometry = new THREE.BufferGeometry().setFromPoints(points)
+		const material = new THREE.LineBasicMaterial({color: 0xff0000})
+		const splineObject = new THREE.Line(geometry, material)
+		splineObject.rotation.x = Math.PI/2
+		splineObject.position.y = .05
+		scene.add(splineObject)
+		/*****************************************************************************************************/
+		
+		const targetPosition = new THREE.Vector3();
+		const tankPosition = new THREE.Vector2();
+		const tankTarget = new THREE.Vector2();
+		
+		function animateRender (time=0) {
+			time *= .001
+			if(resizeRendererToDisplaySize(renderer)){
+				const canvas = renderer.domElement;
+				cameras.forEach(camera => {
+					camera.aspect = canvas.clientWidth / canvas.clientHeight;
+					camera.updateProjectionMatrix()
+				})
+			}
+			
+			/*移动目标*/
+			targetOrbit.rotation.y = time*.27
+			targetBob.position.y = Math.sin(time*2)*4
+			targetMesh.rotation.x = time*7
+			targetMesh.rotation.y = time*13
+			targetMaterial.emissive.setHSL(time*10%1, 1, .25)
+			targetMaterial.color.setHSL(time*10%1, 1, .25)
+			
+			/*移动坦克*/
+			const tankTime = time*.05
+			curve.getPointAt(tankTime%1, tankPosition)
+			curve.getPointAt((tankTime + .01)%1, tankTarget)
+			tank.position.set(tankPosition.x, 0, tankPosition.y)
+			tank.lookAt(tankTarget.x, 0, tankTarget.y)
+			
+			/*炮塔瞄准目标小球*/
+			targetMesh.getWorldPosition(targetPosition)
+			turretPivot.lookAt(targetPosition)
+			
+			/*炮塔相机瞄准目标小球*/
+			turretCamera.lookAt(targetPosition)
+			
+			/*目标相机瞄准目标小球*/
+			tank.getWorldPosition(targetPosition)
+			targetCameraPivot.lookAt(targetPosition)
+			
+			/*轮子绕路线滚动起来*/
+			wheelMeshes.forEach(wheel => {
+				wheel.rotation.x = time*3
+			})
+			
+			renderer.render(scene, camera)
+			requestAnimationFrame(animateRender)
+		}
+		
+		animateRender()
+	}
+	main()
+</script>
+</body>
+</html>
